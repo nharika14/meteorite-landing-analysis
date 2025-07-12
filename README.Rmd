@@ -1,7 +1,129 @@
 ---
 title: "Meteorite Landings Since 1900"
+author: Harika Nalika, Ethan Olderog
+#output: html_document
+
 output: 
   github_document:
     html_preview: false
 ---
+>Since ancient times, meteorites have fascinated scientists and the public alike, offering insights into the composition and history of our solar system. In this project, we explore global meteorite landing records since 1900 to analyze discovery patterns, mass distributions, spatial clustering, and classification trends. Our goal is to identify major trends and generate hypotheses for future research.
 
+```{r}
+library(tidyverse)
+library(lubridate)
+
+mets <- read_csv("meteorite-landings.csv", show_col_types = FALSE) %>%
+  mutate(
+    year = as.integer(str_sub(year, 1, 4)),  # safer than ymd_hms
+    mass = as.numeric(mass),
+    lat = as.numeric(reclat),
+    long = as.numeric(reclong)
+  ) %>%
+  filter(
+    !is.na(year), year >= 1900,
+    !is.na(lat), !is.na(long),
+    !is.na(mass), mass > 0
+  )
+nrow(mets)
+
+```
+```{r}
+mets %>%
+  summarise(
+    n_meteorites = n(),
+    mean_mass_g = mean(mass),
+    median_mass_g = median(mass),
+    max_mass_kg = max(mass) / 1000
+  )
+```
+>After filtering the data to include only meteorites with valid year (≥ 1900), latitude, longitude, and mass > 0, we retained 37,390 entries. The average meteorite mass is approximately 7.2 kg, though the median is just 27.7 g, indicating a strong right skew. The heaviest recorded meteorite in this dataset weighed 60,000 kg.
+
+```{r}
+mets %>%
+  group_by(year) %>%
+  summarise(n = n()) %>%
+  ggplot(aes(x = year, y = n)) +
+  geom_line(color = "steelblue") +
+  labs(
+    title = "Annual Meteorite Discoveries Since 1900",
+    x = "Year",
+    y = "Number of Discoveries"
+  )
+
+```
+>The number of meteorite discoveries per year increased steadily throughout the 20th century, peaking in the 1990s with over 3,000 discoveries in some years. This surge may be linked to improvements in cataloging, research funding, and global collaboration. However, discovery counts dropped sharply after the 2000s, possibly reflecting a plateau in known meteorite fields or changes in data reporting. It's unclear whether the drop in post-2000 discoveries reflects actual decline or incomplete reporting in recent decades. Further investigation using satellite-based observation or institutional records could clarify this.
+
+```{r}
+mets %>%
+  mutate(decade = floor(year / 10) * 10) %>%
+  group_by(decade) %>%
+  summarise(median_mass = median(mass)) %>%
+  ggplot(aes(x = decade, y = median_mass)) +
+  geom_line(color = "darkgreen", linewidth = 1) +
+  labs(
+    title = "Median Meteorite Mass by Decade",
+    x = "Decade",
+    y = "Median Mass (g)"
+  )
+
+```
+>The median mass of discovered meteorites has sharply decreased since the mid-20th century. Earlier decades often recorded meteorites with median masses exceeding 5,000 grams, but this fell below 500 grams after 1980. This trend suggests that modern search efforts and improved detection technology have enabled the identification of smaller fragments that would have been missed in the past. It is also possible that older discoveries were biased toward larger, more noticeable meteorites, while smaller ones were either unreported or eroded. The recent shift may reflect better documentation rather than a true change in what is falling to Earth.
+
+```{r}
+# Step 1: Find top 5 classes
+top_classes <- mets %>%
+  count(recclass, sort = TRUE) %>%
+  slice_max(n, n = 5) %>%
+  pull(recclass)
+
+# Step 2: Plot how these change over time
+mets %>%
+  filter(recclass %in% top_classes) %>%
+  mutate(decade = floor(year / 10) * 10) %>%
+  group_by(recclass, decade) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  ggplot(aes(x = decade, y = count, color = recclass)) +
+  geom_line(linewidth = 1.2) +
+  labs(
+    title = "Top 5 Meteorite Classes Over Time",
+    x = "Decade",
+    y = "Number of Discoveries",
+    color = "Class"
+  )
+
+```
+>The most common meteorite classes discovered since 1900 are H5, H6, L6, L5, and H4 — all ordinary chondrites. Their discovery counts surged after 1970 and peaked in the 1980s and 1990s. L6 class meteorites, in particular, showed the steepest rise and highest total count during this period. The trends suggest either a genuine increase in fall frequency or better recognition and classification of these common types. These trends could also be influenced by sampling bias — desert expeditions or recovery programs might have favored certain types due to their visual or magnetic properties.
+
+```{r}
+mass_cutoff <- quantile(mets$mass, 0.99)
+
+top1 <- mets %>%
+  filter(mass >= mass_cutoff)
+top1 %>%
+  summarise(
+    count = n(),
+    mean_mass_kg = mean(mass) / 1000,
+    median_mass_kg = median(mass) / 1000,
+    top_class = names(sort(table(recclass), decreasing = TRUE))[1]
+  )
+library(maps)
+world <- map_data("world")
+
+ggplot() +
+  geom_map(data = world, map = world,
+           aes(x = long, y = lat, map_id = region),
+           fill = "gray90", color = "white") +
+  geom_point(data = top1, aes(x = long, y = lat),
+             color = "red", size = 1.5, alpha = 0.6) +
+  labs(
+    title = "Global Locations of the Heaviest 1% Meteorites",
+    x = "Longitude", y = "Latitude"
+  ) +
+  coord_fixed()
+```
+>The top 1% of meteorites by mass were analyzed to uncover what distinguishes them from the rest. This group contains 374 meteorites with a median mass of approximately 46.6 kg and a mean of over 114 kg. These massive meteorites are geographically spread across all continents, with clusters in Africa, Europe, and the Americas. The most common class among them is H5, suggesting that even the heaviest meteorites often belong to common types. The wide spread of these heavy meteorites suggests global reporting rather than regional bias. However, their discoverability may still be influenced by landscape (e.g., deserts) or ease of identification due to size.
+
+##Conclusion
+>This analysis of over 47,000 meteorite landings since 1900 reveals several meaningful global patterns. Discovery counts peaked in the late 20th century and have declined in recent decades, potentially due to shifts in exploration, documentation, or research priorities. The mass of discovered meteorites has significantly decreased over time, likely reflecting the growing ability to detect smaller fragments. Classification trends show ordinary chondrites (especially H5, L5, L6) have dominated discoveries, while the heaviest meteorites — the top 1% — are found on every continent but tend to cluster in accessible or arid regions.
+These findings highlight the influence of both physical characteristics and human factors (like search effort or geography) on what gets discovered and reported. Future research could examine how satellite data or remote sensing technologies might reshape discovery patterns in the 21st century.
