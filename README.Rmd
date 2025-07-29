@@ -1,153 +1,244 @@
 ---
 title: "Meteorite Landings Since 1900"
 author: "Harika Nalika & Ethan Olderog"
-output: html_document
+output: 
+  html_document:
+    self_contained: true
+    toc: false
 ---
 
-# Introduction  
+```{r setup, include=FALSE}
+# Global chunk options
+knitr::opts_chunk$set(
+  echo = TRUE, message = FALSE, warning = FALSE,
+  fig.width = 7, fig.height = 4.5
+)
 
-Rocks from space grab people’s attention because, well, they’re *from space*.  
-Here I track how meteorite finds have changed since 1900. First I describe the data, then I ask:
+# Make sure ggplot2 is loaded before theme_set
+if (!requireNamespace("ggplot2", quietly = TRUE)) {
+  stop('Package "ggplot2" is required. Please install it with: install.packages("ggplot2")')
+}
+library(ggplot2)
+ggplot2::theme_set(ggplot2::theme_minimal(base_size = 12))
+```
 
-* Are we finding more pieces these days?  
-* What kinds show up the most?  
-* Where do the biggest ones land?  
+# Introduction
 
-Whenever something felt off, I stopped and checked it before moving on.
+Space rocks are interesting because they come from outside Earth.  
+This project looks at meteorite records since 1900. I will answer three simple questions:
 
-# Data  
+- Are we finding more pieces now than before?
+- What kinds show up the most?
+- Where do the biggest ones show up?
 
-I pulled NASA’s public **Meteorite Landings** CSV (≈ 47 k rows).  
-Key columns:
+If something did not look right, I checked it before moving on.
 
-* `name` – ID  
-* `year` – year found or seen falling  
-* `mass` – grams  
-* `recclass` – type  
-* `reclat`, `reclong` – landing spot  
+# Data
 
-Cleaning steps:
+I used NASA's public "Meteorite Landings" CSV.  
+Important columns:
 
-1. Dropped rows with missing year/lat/long/mass or mass ≤ 0.  
-2. Extracted the year from the timestamp.  
+- `name` - an id for the piece
+- `year` - the year it was found or seen falling
+- `mass` - the mass in grams
+- `recclass` - the type
+- `reclat`, `reclong` - the location (or I can parse it from a text field named `GeoLocation` if needed)
 
-That left **~47 300** records from 1900–2023.
+Cleaning steps I used:
 
-```{r}
-library(tidyverse)
-library(lubridate)
+1. Drop rows with missing year, latitude, longitude, or mass, or with mass less than or equal to 0.
+2. Turn date-time into just a year when needed.
+3. Keep only years from 1900 up to the current year, so there are no future years in the plots.
 
-mets <- read_csv("meteorite-landings.csv", show_col_types = FALSE) %>% 
+```{r load-data}
+# Libraries
+for (pkg in c("readr","dplyr","tidyr","lubridate")) {
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    stop(paste('Package "', pkg, '" is required. install.packages("', pkg, '")', sep = ""))
+  }
+}
+library(readr); library(dplyr); library(tidyr); library(lubridate)
+
+# Require the CSV to be in the same folder; fail fast with a clear message
+if (!file.exists("meteorite-landings.csv")) {
+  stop('Could not find "meteorite-landings.csv" in the working directory. Place the CSV next to this Rmd and knit again.')
+}
+
+raw_mets <- readr::read_csv("meteorite-landings.csv", guess_max = 100000, show_col_types = FALSE)
+
+# Some copies use "mass (g)" instead of "mass"
+if (!("mass" %in% names(raw_mets)) && ("mass (g)" %in% names(raw_mets))) {
+  raw_mets <- dplyr::rename(raw_mets, mass = `mass (g)`)
+}
+
+# If reclat and reclong are missing but GeoLocation exists like "(lat, long)",
+# extract them using simple string steps (no backslash escapes)
+if (!("reclat" %in% names(raw_mets)) && ("GeoLocation" %in% names(raw_mets))) {
+  tmp <- raw_mets %>%
+    mutate(GeoLocation = as.character(GeoLocation)) %>%
+    mutate(GeoLocation_clean = gsub("[()]", "", GeoLocation)) %>%
+    tidyr::separate(GeoLocation_clean, into = c("lat_extracted", "long_extracted"),
+                    sep = ",", fill = "right", extra = "drop", remove = FALSE) %>%
+    mutate(lat_extracted = trimws(lat_extracted),
+           long_extracted = trimws(long_extracted))
+  if ("lat_extracted" %in% names(tmp) && "long_extracted" %in% names(tmp)) {
+    raw_mets <- tmp %>%
+      mutate(reclat = lat_extracted, reclong = long_extracted) %>%
+      select(-lat_extracted, -long_extracted, -GeoLocation_clean)
+  }
+}
+
+# Helper: safe numeric conversion
+to_numeric <- function(x) {
+  if (is.numeric(x)) return(x)
+  suppressWarnings(as.numeric(as.character(x)))
+}
+
+current_year <- lubridate::year(Sys.Date())
+
+# Parse and clean
+mets <- raw_mets %>%
   mutate(
-    year = year(as.Date(year, format = "%Y-%m-%d")),
-    lat  = as.numeric(reclat),
-    long = as.numeric(reclong)
-  ) %>% 
-  filter(year >= 1900, !is.na(lat), !is.na(long), !is.na(mass), mass > 0)
+    year_raw = year,
+    # Try several date formats; fall back to integer if already just a year
+    year = suppressWarnings(lubridate::year(lubridate::ymd_hms(as.character(year)))),
+    year = ifelse(is.na(year), suppressWarnings(lubridate::year(lubridate::ymd(as.character(year)))), year),
+    year = ifelse(is.na(year), suppressWarnings(as.integer(as.character(year_raw))), year),
+    lat  = to_numeric(reclat),
+    long = to_numeric(reclong),
+    mass = to_numeric(mass)
+  ) %>%
+  filter(!is.na(year), year >= 1900, year <= current_year,
+         !is.na(lat), !is.na(long),
+         !is.na(mass), mass > 0) %>%
+  mutate(decade = floor(year / 10) * 10)
+
+# Quick check
+dplyr::glimpse(mets)
 ```
 
-# Digging In (Curiosity)  
+# Results and simple explanations
 
-I tried a bunch of plots—lines, boxplots, heat maps, etc.—and kept only the useful ones.
+I tried a few plots and kept the ones that answered the questions directly.
 
-```{r}
-mets %>% 
+```{r summary-stats, fig.cap="Summary of the dataset after cleaning."}
+summary_tbl <- mets %>%
   summarise(
-    n_meteorites = n(),
-    mean_mass_g  = mean(mass),
-    median_mass_g = median(mass),
-    heaviest_g    = max(mass)
+    n_meteorites  = n(),
+    mean_mass_g   = mean(mass, na.rm = TRUE),
+    median_mass_g = median(mass, na.rm = TRUE),
+    heaviest_g    = max(mass, na.rm = TRUE)
   )
+
+knitr::kable(summary_tbl, caption = "Overall summary statistics")
 ```
 
-```{r}
-mets %>% 
-  group_by(year) %>% 
-  summarise(n = n()) %>% 
+**Plain explanation:**  
+This table tells us how many rows we have and the basic mass numbers. If the mean is much bigger than the median, it means there are a few very heavy meteorites that pull up the average. That is normal with this kind of data.
+
+```{r per-year-count, fig.cap="Meteorites found per year (no future years)."}
+mets %>%
+  count(year, name = "n") %>%
   ggplot(aes(x = year, y = n)) +
-  geom_line() +
+  geom_line(na.rm = TRUE) +
   labs(title = "Meteorites Found per Year",
        x = "Year", y = "Count")
 ```
 
-```{r}
-mets %>% 
-  mutate(decade = floor(year / 10) * 10) %>% 
-  group_by(decade) %>% 
-  summarise(median_mass = median(mass)) %>% 
+**Plain explanation:**  
+Each point shows how many meteorites were recorded in that year. The line goes up and down, but overall it rises. This means we record more finds now than in the early 1900s. Better tools and more searching likely help.
+
+```{r median-mass-by-decade, fig.cap="Typical meteorite mass by decade (median)."}
+mets %>%
+  group_by(decade) %>%
+  summarise(median_mass = median(mass, na.rm = TRUE), .groups = "drop") %>%
   ggplot(aes(x = decade, y = median_mass)) +
-  geom_line() +
+  geom_line(na.rm = TRUE) +
   labs(title = "Median Mass by Decade",
        x = "Decade", y = "Median Mass (g)")
 ```
 
-# Kicking the Tires (Scepticism)  
+**Plain explanation:**  
+This shows the typical mass in each decade. If the line is lower in recent decades, that means we are logging more small pieces now. That makes sense because small fragments are easier to find with modern methods.
 
-* **Early-century spike** – double-checked raw file; counts were real.  
-* **Drop in median mass** – re-ran trend on only the heaviest 10 %; drop disappeared (so tech lets us spot tiny pieces).  
-* **Desert clusters** – might be sampling bias. I overlaid population density; clumps stayed, so it’s visibility, not people.
+```{r top-classes-over-time, fig.cap="Top 5 meteorite classes across decades."}
+# Top 5 classes across decades
+class_counts <- mets %>%
+  filter(!is.na(recclass), recclass != "") %>%
+  count(recclass, sort = TRUE)
 
-Whenever a pattern fell apart after a tweak, I cut it.
-
-# Key Findings  
-
-* We spot **~10×** more meteorites per year now than in 1900.  
-* Typical find mass keeps dropping—small pieces are easier to spot with new tools.  
-* **Ordinary chondrites** lead the pack every decade.  
-* The **heaviest 1 %** land everywhere, but hot, dry places (Sahara, Aussie outback) win—metal stands out against sand.
-
-The next two plots back this up.
-
-```{r}
-# Five most common classes, over time
-top_classes <- mets %>% 
-  count(recclass, sort = TRUE) %>% 
-  slice_max(n, n = 5) %>% 
+top_classes <- class_counts %>%
+  slice_head(n = 5) %>%
   pull(recclass)
 
-mets %>% 
-  filter(recclass %in% top_classes) %>% 
-  mutate(decade = floor(year / 10) * 10) %>% 
-  group_by(recclass, decade) %>% 
-  summarise(n = n(), .groups = "drop") %>% 
-  ggplot(aes(decade, n, colour = recclass)) +
-  geom_line() +
+class_by_decade <- mets %>%
+  filter(recclass %in% top_classes) %>%
+  group_by(recclass, decade) %>%
+  summarise(n = n(), .groups = "drop")
+
+stopifnot(nrow(class_by_decade) > 0)
+
+ggplot(class_by_decade, aes(decade, n, group = recclass)) +
+  geom_line(aes(linetype = recclass)) +
   labs(title = "Top 5 Meteorite Classes Across Decades",
-       x = "Decade", y = "Count", colour = "Class")
+       x = "Decade", y = "Count", linetype = "Class")
 ```
 
-```{r}
-# Map heaviest 1 %
-library(maps)
-mass_cutoff <- quantile(mets$mass, 0.99)
+**Plain explanation:**  
+This compares the most common types over time. If a type stays high across many decades, it is consistently common. In public data, ordinary chondrites are usually the most common. You can see that pattern here too.
 
-top1 <- mets %>% 
-  filter(mass >= mass_cutoff)
+```{r map-heaviest, fig.cap="Where the heaviest 1 percent of meteorites were recorded."}
+# Map heaviest 1 percent with a fallback if the maps package is not installed
+mass_cutoff <- stats::quantile(mets$mass, 0.99, na.rm = TRUE)
 
-world <- map_data("world")
+top1 <- mets %>%
+  filter(!is.na(lat), !is.na(long), mass >= mass_cutoff)
 
-ggplot() +
-  geom_map(data = world, map = world,
-           aes(long, lat, map_id = region),
-           fill = "gray90", colour = "white") +
-  geom_point(data = top1,
-             aes(long, lat),
-             colour = "red", size = 1.5, alpha = 0.6) +
-  labs(title = "Where the Heaviest 1 % Landed",
-       x = "Longitude", y = "Latitude") +
-  coord_fixed()
+if (nrow(top1) == 0) {
+  warning("Heaviest 1 percent subset is empty. Check mass parsing.")
+}
+
+if (requireNamespace("maps", quietly = TRUE)) {
+  world <- ggplot2::map_data("world")
+
+  ggplot() +
+    geom_polygon(data = world,
+                 mapping = aes(long, lat, group = group),
+                 fill = "gray90", color = "white", linewidth = 0.2) +
+    geom_point(data = top1, aes(long, lat),
+               size = 1.5, alpha = 0.6) +
+    coord_fixed(1.3) +
+    labs(title = "Heaviest 1 Percent - Locations",
+         subtitle = "Basemap requires the maps package",
+         x = "Longitude", y = "Latitude")
+} else {
+  # Fallback: plot points without a basemap so it never knits blank
+  ggplot(top1, aes(long, lat)) +
+    geom_point(size = 1.5, alpha = 0.6) +
+    coord_fixed(1.3) +
+    labs(title = "Heaviest 1 Percent - Locations",
+         subtitle = "Basemap not installed. Showing points only.",
+         x = "Longitude", y = "Latitude")
+}
 ```
 
-# Conclusion and Next Steps  
+**Plain explanation:**  
+These dots show where the biggest meteorites in the dataset were found. You will notice a lot in desert and open areas. That fits basic common sense. Big dark rocks are easier to see and keep their shape better on bare ground.
 
-Meteorite hunting has exploded in the last century, partly thanks to better gear and more people looking.  
-If I had extra time I would:
+# Conclusion
 
-* Separate “fell” vs. “found” events.  
-* Compare pro vs. amateur finds.  
-* Build a simple model to predict next-decade hot spots.
+Main takeaways in simple words:
 
-# Reproducibility  
+- We record more meteorites per year now than we did long ago.
+- The typical mass is smaller in recent decades, which fits with finding more small pieces.
+- A few types are common almost every decade. Ordinary chondrites are the most common.
+- The biggest pieces show up in many places, but deserts and open land make them easier to spot.
 
-All charts and stats come straight from the chunks above—knit the file and you’ll get the same results.  
-The CSV lives in the same folder as this `.Rmd`.
+# Reproducibility
+
+All results come directly from the code chunks. Knit this file and you should see the same numbers and figures.  
+Keep "meteorite-landings.csv" in the same folder as this Rmd.
+
+```{r session-info}
+sessionInfo()
+```
