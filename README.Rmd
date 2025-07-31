@@ -1,12 +1,40 @@
 ---
 title: "Meteorite Landings Since 1900"
 author: "Harika Nalika & Ethan Olderog"
-output: 
+output:
   html_document:
     self_contained: true
     toc: false
----
+  github_document: default
+knit: (function(input, encoding) {
+  rmarkdown::render(
+    input, encoding = encoding,
+    output_format = "html_document",
+    output_file = "README.html",
+    quiet = TRUE
+  )
+  rmarkdown::render(
+    input, encoding = encoding,
+    output_format = "github_document",
+    output_file = "README.md",
+    quiet = TRUE
+  )
+  if (!dir.exists("docs")) dir.create("docs")
+  file.copy("README.html", file.path("docs", "index.html"), overwrite = TRUE)
 
+  if (dir.exists("README_files")) {
+    unlink(file.path("docs", "README_files"), recursive = TRUE, force = TRUE)
+    dir.create(file.path("docs", "README_files"), showWarnings = FALSE)
+    file.copy(
+      list.files("README_files", recursive = TRUE, full.names = TRUE),
+      file.path("docs", "README_files"),
+      recursive = TRUE, overwrite = TRUE
+    )
+  }
+
+  "README.html"
+})
+---
 ```{r setup, include=FALSE}
 # Global chunk options
 knitr::opts_chunk$set(
