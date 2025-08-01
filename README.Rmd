@@ -237,7 +237,7 @@ Main takeaways in simple words:
 # Reproducibility
 
 All results come directly from the code chunks. Knit this file and you should see the same numbers and figures.  
-Keep "meteorite-landings.csv" in the same folder as this Rmd.
+Keep "meteorite-landings.csv" in the same folder as this Rmd..
 
 ```{r session-info}
 sessionInfo()
