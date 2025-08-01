@@ -37,6 +37,8 @@ library(dplyr)
 library(tidyr)
 library(lubridate)
 library(ggplot2)
+library(scales)
+library(knitr)
 
 # Optional for map; code falls back if not installed
 has_maps <- requireNamespace("maps", quietly = TRUE)
@@ -96,17 +98,67 @@ mets <- raw_mets %>%
 glimpse(mets)
 ```
 
-### Variables
+### Why these cleaning choices
 
-* `name` – identifier for the piece  
-* `year` – year recorded (found or witnessed fall)  
-* `mass` – mass in grams  
-* `recclass` – class or type (for example L6, H5, CM2, or Iron types)  
-* `fall` – “Found” or “Fell” (witnessed)  
-* `lat`, `long` – latitude and longitude (from `reclat`, `reclong` or `GeoLocation`)  
-* `decade` – decade bin for trend displays
+We keep the time window from 1900 to today so that reporting practices are more comparable. Very old records often miss mass or coordinates and that makes maps and size comparisons hard to trust. We require a positive mass because zero or negative values are clear entry mistakes. We also keep only rows with a latitude and longitude so that location summaries match the plots. Finally, we use the year from a timestamp if it exists, fall back to a date, and then to a plain number. This order avoids losing valid years that are stored in different ways across files.
+
+### Key variables after cleaning
+
+```{r}
+var_types <- tibble(
+  variable = c("name","year","mass","recclass","fall","lat","long","decade"),
+  type = c(class(mets$name)[1],
+           class(mets$year)[1],
+           class(mets$mass)[1],
+           class(mets$recclass)[1],
+           class(mets$fall)[1],
+           class(mets$lat)[1],
+           class(mets$long)[1],
+           class(mets$decade)[1]),
+  example = c(as.character(mets$name[which(!is.na(mets$name))[1]]),
+              mets$year[1],
+              mets$mass[1],
+              as.character(mets$recclass[which(!is.na(mets$recclass))[1]]),
+              as.character(mets$fall[which(!is.na(mets$fall))[1]]),
+              mets$lat[1],
+              mets$long[1],
+              mets$decade[1])
+)
+
+knitr::kable(var_types, caption = "Variable types and a sample value after cleaning")
+```
+
+### Summary of the dataset after cleaning
+
+```{r}
+summary_tbl <- mets %>%
+  summarise(
+    records = n(),
+    classes = n_distinct(recclass),
+    share_witnessed = mean(tolower(fall) == "fell", na.rm = TRUE),
+    share_antarctica = mean(lat <= -60, na.rm = TRUE),
+    mass_min_g = min(mass, na.rm = TRUE),
+    mass_q1_g  = quantile(mass, 0.25, na.rm = TRUE),
+    mass_median_g = median(mass, na.rm = TRUE),
+    mass_mean_g = mean(mass, na.rm = TRUE),
+    mass_q3_g  = quantile(mass, 0.75, na.rm = TRUE),
+    mass_max_g = max(mass, na.rm = TRUE)
+  ) %>%
+  mutate(
+    share_witnessed = percent(share_witnessed),
+    share_antarctica = percent(share_antarctica)
+  )
+
+knitr::kable(summary_tbl, caption = "Summary of the dataset after cleaning")
+```
+
+**How to read this table.** There are **`r format(summary_tbl$records, big.mark=",")`** records in the cleaned data spread across **`r summary_tbl$classes`** distinct classes. Only **`r summary_tbl$share_witnessed`** are witnessed falls, so most entries are finds that were collected later. About **`r summary_tbl$share_antarctica`** come from Antarctic latitudes, which shows how important that region is for recovery.
+
+For mass, the smallest recorded piece is **`r format(round(summary_tbl$mass_min_g,1), big.mark=",")` g**. A quarter of all pieces are below **`r format(round(summary_tbl$mass_q1_g,1), big.mark=",")` g**. The median is **`r format(round(summary_tbl$mass_median_g,1), big.mark=",")` g**, which means half the records are lighter than that and half are heavier. The mean is **`r format(round(summary_tbl$mass_mean_g,1), big.mark=",")` g**, which is usually higher than the median because a few very heavy meteorites pull the average up. Three quarters of the pieces are below **`r format(round(summary_tbl$mass_q3_g,1), big.mark=",")` g**. The largest piece reaches **`r format(round(summary_tbl$mass_max_g,1), big.mark=",")` g**. The big gap between the upper quartile and the maximum and the difference between mean and median tell us the mass distribution has a long right tail. That is a helpful warning when we look at size trends later.
 
 ## Results
+
+The next sections focus on four ideas that match our questions: yearly counts, typical size by decade, class composition, and where the heaviest one percent were recovered. Each section uses the same cleaned data and gives a short explanation of what the figure means in plain language.
 
 ### Are we recording more meteorites over time?
 
@@ -168,7 +220,7 @@ ggplot(dec_med, aes(decade, median_mass)) +
        x = "Decade", y = "Median Mass (g)")
 ```
 
-**Explanation.** The typical size is larger in early decades and smaller in recent decades. For example, the early point is around `r round(early$median_mass,1)` grams in `r early$decade`, while the most recent point is around `r round(recent$median_mass,1)` grams in `r recent$decade`. This fits a common sense story. As searches improved, people started finding lots of small pieces that used to be missed. We use the median on purpose. A few giant meteorites would pull the average up, but the median shows what a middle sized find looks like. The main takeaway is that the catalog has filled in the small end over time.
+**Explanation.** The typical size is larger in early decades and smaller in recent decades. For example, the early point is around `r format(round(early$median_mass,1), big.mark=",")` grams in `r early$decade`, while the most recent point is around `r format(round(recent$median_mass,1), big.mark=",")` grams in `r recent$decade`. This fits a common sense story. As searches improved, people started finding lots of small pieces that used to be missed. We use the median on purpose. A few giant meteorites would pull the average up, but the median shows what a middle sized find looks like. The main takeaway is that the catalog has filled in the small end over time.
 
 #### Robustness: exclude irons
 
@@ -195,10 +247,14 @@ class_counts <- mets %>%
   filter(!is.na(recclass), recclass != "") %>%
   count(recclass, sort = TRUE)
 
-top_classes <- class_counts %>% slice_head(n = 5) %>% pull(recclass)
+top_classes <- class_counts %>% slice_head(n = 10) %>%
+  mutate(share = n / sum(n))
+
+knitr::kable(top_classes, caption = "Top 10 meteorite classes in the cleaned data",
+             col.names = c("Class","Count","Share"))
 
 class_by_decade <- mets %>%
-  filter(recclass %in% top_classes) %>%
+  filter(recclass %in% top_classes$recclass) %>%
   group_by(recclass, decade) %>%
   summarise(n = n(), .groups = "drop")
 
@@ -206,7 +262,7 @@ oc_share <- mean(grepl("^(H|L|LL)", mets$recclass), na.rm = TRUE)
 
 ggplot(class_by_decade, aes(decade, n, linetype = recclass)) +
   geom_line() +
-  labs(title = "Top 5 Meteorite Classes Across Decades",
+  labs(title = "Top Classes Across Decades",
        x = "Decade", y = "Count", linetype = "Class")
 ```
 
@@ -256,7 +312,3 @@ We return to the four questions from the introduction and answer them directly.
 4. **Where are the heaviest pieces recorded, and do location and environment matter?** The heaviest finds cluster in places that help people see and recover them, such as deserts and Antarctica. Many of the largest are irons. This is about visibility and survival on the ground, not necessarily about where the sky drops the most material.
 
 Overall, the visuals tell a consistent story. The number of records follows the effort we put into searching and cataloging. The typical size has moved down because we now collect small pieces too. The type mix stays steady with ordinary chondrites in the lead. Heavy finds show up where the land helps us notice them. These points make the graphs easier to talk about in plain language and set honest expectations for what this dataset can and cannot tell us.
-
-## Reproducibility
-
-All results are produced by the code above. Keep `meteorite-landings.csv` in the same folder as this document to knit successfully.

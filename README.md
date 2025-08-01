@@ -112,18 +112,110 @@ glimpse(mets)
     ## $ long        <dbl> 10.23333, -113.00000, -99.90000, -64.95000, 71.80000, 95.1…
     ## $ decade      <dbl> 1950, 1950, 1970, 1900, 1910, 1940, 1930, 1920, 1970, 1920…
 
-### Variables
+### Why these cleaning choices
 
-- `name` – identifier for the piece  
-- `year` – year recorded (found or witnessed fall)  
-- `mass` – mass in grams  
-- `recclass` – class or type (for example L6, H5, CM2, or Iron types)  
-- `fall` – “Found” or “Fell” (witnessed)  
-- `lat`, `long` – latitude and longitude (from `reclat`, `reclong` or
-  `GeoLocation`)  
-- `decade` – decade bin for trend displays
+We keep the time window from 1900 to today so that reporting practices
+are more comparable. Very old records often miss mass or coordinates and
+that makes maps and size comparisons hard to trust. We require a
+positive mass because zero or negative values are clear entry mistakes.
+We also keep only rows with a latitude and longitude so that location
+summaries match the plots. Finally, we use the year from a timestamp if
+it exists, fall back to a date, and then to a plain number. This order
+avoids losing valid years that are stored in different ways across
+files.
+
+### Key variables after cleaning
+
+``` r
+var_types <- tibble(
+  variable = c("name","year","mass","recclass","fall","lat","long","decade"),
+  type = c(class(mets$name)[1],
+           class(mets$year)[1],
+           class(mets$mass)[1],
+           class(mets$recclass)[1],
+           class(mets$fall)[1],
+           class(mets$lat)[1],
+           class(mets$long)[1],
+           class(mets$decade)[1]),
+  example = c(as.character(mets$name[which(!is.na(mets$name))[1]]),
+              mets$year[1],
+              mets$mass[1],
+              as.character(mets$recclass[which(!is.na(mets$recclass))[1]]),
+              as.character(mets$fall[which(!is.na(mets$fall))[1]]),
+              mets$lat[1],
+              mets$long[1],
+              mets$decade[1])
+)
+
+knitr::kable(var_types, caption = "Variable types and a sample value after cleaning")
+```
+
+| variable | type      | example  |
+|:---------|:----------|:---------|
+| name     | character | Aarhus   |
+| year     | numeric   | 1951     |
+| mass     | numeric   | 720      |
+| recclass | character | H6       |
+| fall     | character | Fell     |
+| lat      | numeric   | 56.18333 |
+| long     | numeric   | 10.23333 |
+| decade   | numeric   | 1950     |
+
+Variable types and a sample value after cleaning
+
+### Summary of the dataset after cleaning
+
+``` r
+summary_tbl <- mets %>%
+  summarise(
+    records = n(),
+    classes = n_distinct(recclass),
+    share_witnessed = mean(tolower(fall) == "fell", na.rm = TRUE),
+    share_antarctica = mean(lat <= -60, na.rm = TRUE),
+    mass_min_g = min(mass, na.rm = TRUE),
+    mass_q1_g  = quantile(mass, 0.25, na.rm = TRUE),
+    mass_median_g = median(mass, na.rm = TRUE),
+    mass_mean_g = mean(mass, na.rm = TRUE),
+    mass_q3_g  = quantile(mass, 0.75, na.rm = TRUE),
+    mass_max_g = max(mass, na.rm = TRUE)
+  ) %>%
+  mutate(
+    share_witnessed = percent(share_witnessed),
+    share_antarctica = percent(share_antarctica)
+  )
+
+knitr::kable(summary_tbl, caption = "Summary of the dataset after cleaning")
+```
+
+| records | classes | share_witnessed | share_antarctica | mass_min_g | mass_q1_g | mass_median_g | mass_mean_g | mass_q3_g | mass_max_g |
+|---:|---:|:---|:---|---:|---:|---:|---:|---:|---:|
+| 37389 | 404 | 2% | 59% | 0.01 | 6.5 | 27.7 | 7218.089 | 167 | 6e+07 |
+
+Summary of the dataset after cleaning
+
+**How to read this table.** There are **37,389** records in the cleaned
+data spread across **404** distinct classes. Only **2%** are witnessed
+falls, so most entries are finds that were collected later. About
+**59%** come from Antarctic latitudes, which shows how important that
+region is for recovery.
+
+For mass, the smallest recorded piece is **0 g**. A quarter of all
+pieces are below **6.5 g**. The median is **27.7 g**, which means half
+the records are lighter than that and half are heavier. The mean is
+**7,218.1 g**, which is usually higher than the median because a few
+very heavy meteorites pull the average up. Three quarters of the pieces
+are below **167 g**. The largest piece reaches **6e+07 g**. The big gap
+between the upper quartile and the maximum and the difference between
+mean and median tell us the mass distribution has a long right tail.
+That is a helpful warning when we look at size trends later.
 
 ## Results
+
+The next sections focus on four ideas that match our questions: yearly
+counts, typical size by decade, class composition, and where the
+heaviest one percent were recovered. Each section uses the same cleaned
+data and gives a short explanation of what the figure means in plain
+language.
 
 ### Are we recording more meteorites over time?
 
@@ -137,7 +229,7 @@ ggplot(yr_counts, aes(year, n)) +
        x = "Year", y = "Count")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
 **Explanation.** The line starts low in the early 1900s and climbs after
 the 1960s. It reaches a high point in **1979** with **3044** records.
@@ -164,7 +256,7 @@ ggplot(yr_comp, aes(year, n, linetype = set)) +
        x = "Year", y = "Count", linetype = "")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 **Explanation.** Antarctica is famous for meteorite hunting because dark
 rocks are easy to spot on ice and they last longer there. When we remove
@@ -182,7 +274,7 @@ ggplot(fell_only, aes(year, n)) +
        x = "Year", y = "Count")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
 **Explanation.** This line is much lower and fairly flat. A witnessed
 fall needs a person who sees the fireball and reports it. Because this
@@ -207,10 +299,10 @@ ggplot(dec_med, aes(decade, median_mass)) +
        x = "Decade", y = "Median Mass (g)")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 **Explanation.** The typical size is larger in early decades and smaller
-in recent decades. For example, the early point is around 6700 grams in
+in recent decades. For example, the early point is around 6,700 grams in
 1900, while the most recent point is around 100.7 grams in 2010. This
 fits a common sense story. As searches improved, people started finding
 lots of small pieces that used to be missed. We use the median on
@@ -232,7 +324,7 @@ ggplot(dec_med_no_iron, aes(decade, median_mass)) +
        x = "Decade", y = "Median Mass (g)")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 **Explanation.** Iron meteorites are tough and easy to notice, so they
 could make earlier decades look heavier. When we remove irons, the
@@ -249,10 +341,31 @@ class_counts <- mets %>%
   filter(!is.na(recclass), recclass != "") %>%
   count(recclass, sort = TRUE)
 
-top_classes <- class_counts %>% slice_head(n = 5) %>% pull(recclass)
+top_classes <- class_counts %>% slice_head(n = 10) %>%
+  mutate(share = n / sum(n))
 
+knitr::kable(top_classes, caption = "Top 10 meteorite classes in the cleaned data",
+             col.names = c("Class","Count","Share"))
+```
+
+| Class | Count |     Share |
+|:------|------:|----------:|
+| L6    |  7457 | 0.2475681 |
+| H5    |  6193 | 0.2056041 |
+| H4    |  3869 | 0.1284486 |
+| H6    |  3852 | 0.1278842 |
+| L5    |  3255 | 0.1080641 |
+| LL5   |  2192 | 0.0727731 |
+| LL6   |  1649 | 0.0547459 |
+| L4    |   934 | 0.0310083 |
+| H4/5  |   394 | 0.0130806 |
+| CM2   |   326 | 0.0108230 |
+
+Top 10 meteorite classes in the cleaned data
+
+``` r
 class_by_decade <- mets %>%
-  filter(recclass %in% top_classes) %>%
+  filter(recclass %in% top_classes$recclass) %>%
   group_by(recclass, decade) %>%
   summarise(n = n(), .groups = "drop")
 
@@ -260,11 +373,11 @@ oc_share <- mean(grepl("^(H|L|LL)", mets$recclass), na.rm = TRUE)
 
 ggplot(class_by_decade, aes(decade, n, linetype = recclass)) +
   geom_line() +
-  labs(title = "Top 5 Meteorite Classes Across Decades",
+  labs(title = "Top Classes Across Decades",
        x = "Decade", y = "Count", linetype = "Class")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 **Explanation.** Ordinary chondrites, which include the L and H groups,
 are the most common across all decades. In our data they make up about
@@ -303,7 +416,7 @@ if (has_maps) {
 }
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
 **Explanation.** The heaviest pieces tend to show up in open and dry
 places such as deserts and ice fields. These landscapes make dark rocks
@@ -350,9 +463,3 @@ mix stays steady with ordinary chondrites in the lead. Heavy finds show
 up where the land helps us notice them. These points make the graphs
 easier to talk about in plain language and set honest expectations for
 what this dataset can and cannot tell us.
-
-## Reproducibility
-
-All results are produced by the code above. Keep
-`meteorite-landings.csv` in the same folder as this document to knit
-successfully.
