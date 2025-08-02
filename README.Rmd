@@ -299,6 +299,21 @@ if (has_maps) {
 
 **Explanation.** The heaviest pieces tend to show up in open and dry places such as deserts and ice fields. These landscapes make dark rocks easier to see and they protect them from weather. In the list of the very largest fifteen, **`r top15_iron`** are irons. That matches what people find in the field because iron holds together well and stands out. The map is a picture of where finds were made, not a count of where most rocks fell. In short, location and environment matter a lot for what ends up in the catalog.
 
+
+## Skeptical Reflection
+
+While our analysis provides clear visual patterns, it's important to recognize the limitations of what the dataset can truly tell us.
+
+First, the rise in recorded meteorites over time is heavily influenced by human behavior. Better reporting, more field expeditions, and digital uploads all increase the number of records. The relatively flat trend in witnessed falls supports the idea that this rise is not from more meteorites falling, but from improved discovery efforts.
+
+Second, our findings about typical mass decreasing over time may also reflect changes in detection technology. As smaller fragments became easier to identify and recover, the median size naturally declined. However, some of this could also be due to better classification practices or changes in how meteorites are cataloged.
+
+Third, the consistent dominance of ordinary chondrites may reflect both their abundance and the likelihood of being recognized. Rarer meteorites may go unnoticed or misclassified, especially in regions with less access to identification tools.
+
+Finally, the locations of the heaviest meteorites are biased by terrain and visibility. Large finds are more likely in deserts and icy regions where they are easier to spot and better preserved. That means this map reflects search bias, not true impact locations.
+
+We hope this reflection encourages readers to approach our findings with curiosity but also healthy skepticism.
+
 ## Conclusion
 
 We return to the four questions from the introduction and answer them directly.
