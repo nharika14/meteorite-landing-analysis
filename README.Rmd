@@ -3,15 +3,13 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
-                      fig.width = 7, fig.height = 4.5)
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Analysis on Meteorite Landings Since 1900
 #### Harika Nalika, Ethan Olderog
 
 ## Introduction
-
 The goal of this project is to look at NASA’s **Meteorite Landings** data and understand simple patterns that anyone can see. Meteorites are rocks from space that people either **find** on the ground or **see** fall from the sky. By looking at these records, we want to know when counts went up, how typical sizes changed, what types show up the most, and where the biggest pieces are usually found.
 
 In pursuit of the stated goal, we will explore the following questions:
@@ -22,7 +20,6 @@ In pursuit of the stated goal, we will explore the following questions:
 4. Where are the heaviest pieces recorded? Do location and environment matter?  
 
 These are the main questions we are looking to answer in this project. With the findings we hope to find the patterns in meteorite landing locations and the properties over the years.
-
 
 ## Data
 
