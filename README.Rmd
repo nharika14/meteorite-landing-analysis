@@ -251,7 +251,7 @@ ggplot(dec_med_no_iron, aes(decade, median_mass)) +
        x = "Decade", y = "Median Mass (g)")
 ```
 
-**Explanation.** Iron meteorites are tough and easy to notice, so they could make earlier decades look heavier. When we remove irons, the downward trend still holds. That means the smaller typical size in later decades comes from finding more small stones, not only from a few famous heavy irons.
+Iron meteorites are tough and easy to notice, so they could make earlier decades look heavier. When we remove irons, the downward trend still holds. That means the smaller typical size in later decades comes from finding more small stones, not only from a few famous heavy irons.
 
 ---
 
@@ -298,6 +298,7 @@ mets %>%
 
 ```
 This bar plot compares the number of meteorite findings in the Northern vs. Southern Hemisphere. The Southern Hemisphere has more recorded finds. That’s largely because of Antarctica, and USA and Africa contribute for the north hemisphere. This graph highlights how environmental conditions and search efforts influence the data we have.
+
 ---
 ### Distribution of meteorite masses(Log Scale)
 ```{r}
@@ -368,15 +369,4 @@ ggplot() +
 This map shows where all recorded meteorite finds have been made around the world. We can clearly see dense clusters in North Africa, the United States, and especially Antarctica. That’s not because more meteorites fall in those spots. Instead, it reflects where people are able to find them. Antarctica stands out because dark rocks are super easy to spot against the ice, and the cold preserves them really well. Deserts help too, like in the Sahara and parts of Australia. On the other hand, we see fewer finds in jungles, cities, and oceans where meteorites can get buried, lost, or just ignored.
 
 ## Conclusion
-
-We return to the four questions from the introduction and answer them directly.
-
-1. **When are meteorites most likely to be recorded, and are there long term trends?** Yes, counts go up sharply after the 1960s and peak in **`r peak$year`**. This is mainly about search effort and better record keeping, not a new burst of meteorites. The witnessed fall line stays fairly flat, which supports this idea.
-
-2. **How has the typical size changed across decades?** The median mass is larger in early decades and smaller in recent decades. Modern searches added many small fragments that were missed before, so the center of the size range moved down. This result still holds when irons are removed.
-
-3. **What types are most common over time, and does the mix change?** Ordinary chondrites remain on top across all decades, and they make up about **`r round(oc_share*100,1)` percent** of the records overall. The mix stays stable as the catalog grows, which suggests we are seeing more of the same kinds rather than a major shift in composition.
-
-4. **Where are the heaviest pieces recorded, and do location and environment matter?** The heaviest finds cluster in places that help people see and recover them, such as deserts and Antarctica. Many of the largest are irons. This is about visibility and survival on the ground, not necessarily about where the sky drops the most material.
-
-Overall, the visuals tell a consistent story. The number of records follows the effort we put into searching and cataloging. The typical size has moved down because we now collect small pieces too. The type mix stays steady with ordinary chondrites in the lead. Heavy finds show up where the land helps us notice them. These points make the graphs easier to talk about in plain language and set honest expectations for what this dataset can and cannot tell us.
+Our extensive research on global meteorite findings found trends that challenged some of our assumptions and provided fresh insights into how these space pebbles are discovered and recorded. We in the beginning assumed that meteorite data would reflect where and when they fell. Instead, we found that technology, and environment shape the records significantly more than we thought. Meteorites are discovered not only where they land, but also where people look for them and, more importantly, where they are easiest to notice and survive. This is why deserts and Antarctica appear so clearly on our maps. The increase of reported meteorites over the last few decades, particularly since the 1960s, is due to improved field trips, digital record keeping, and cataloging rather than more meteorites falling. We also discovered that the median mass of meteorites has continuously decreased over decades. This isn't because meteorites are getting smaller.We just got better at finding the smaller ones which would go unnoticed before. Many of the largest are made of iron, which is visually striking and weather resistant.
