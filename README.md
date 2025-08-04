@@ -2,50 +2,29 @@
 # Analysis on Meteorite Landings Since 1900
 
 #### Harika Nalika, Ethan Olderog
-
 ## Introduction
-
-The goal of this project is to look at NASA’s **Meteorite Landings**
-data and understand simple patterns that anyone can see. Meteorites are
-rocks from space that people either **find** on the ground or **see**
-fall from the sky. By looking at these records, we want to know when
-counts went up, how typical sizes changed, what types show up the most,
-and where the biggest pieces are usually found.
+The goal of this project is to look at NASA’s **Meteorite Landings** data and understand simple patterns that anyone can see. Meteorites are rocks from space that people either **find** on the ground or **see** fall from the sky. By looking at these records, we want to know when counts went up, how typical sizes changed, what types show up the most, and where the biggest pieces are usually found.
 
 In pursuit of the stated goal, we will explore the following questions:
 
-1.  When are meteorites most likely to be recorded? Are there long term
-    trends over the years?  
-2.  How has the typical size changed across decades?  
-3.  What types are most common over time? Does the mix change?  
-4.  Where are the heaviest pieces recorded? Do location and environment
-    matter?
+1. When are meteorites most likely to be recorded? Are there long term trends over the years?  
+2. How has the typical size changed across decades?  
+3. What types are most common over time? Does the mix change?  
+4. Where are the heaviest pieces recorded? Do location and environment matter?  
 
-These are the main questions we are looking to answer in this project.
-With the findings we hope to give plain, clear explanations of what the
-visuals show.
+These are the main questions we are looking to answer in this project. With the findings we hope to find the patterns in meteorite landing locations and the properties over the years.
 
 ## Data
 
 ### Structure
 
-We use NASA’s *Meteorite Landings* CSV (Kaggle or NASA mirror, usually
-with columns `name`, `id`, `nametype`, `recclass`, `mass`, `fall`,
-`year`, `reclat`, `reclong`, `GeoLocation`). Each row is one meteorite.
-The file lists the **class** (for example L6 or H5), **mass** in grams,
-whether it was **Found** or **Fell** (witnessed fall), and the
-**location**.
+The link to the dataset is https://data.nasa.gov/dataset/meteorite-landings. We use NASA’s *Meteorite Landings* CSV (This comprehensive data set from The Meteoritical Society contains information on all of the known meteorite landings.The variables are `name`, `id`, `nametype`, `recclass`, `mass`, `fall`, `year`, `reclat`, `reclong`, `GeoLocation`). Each row is one meteorite. The file lists the **class** (for example L6 or H5), **mass** in grams, whether it was **Found** or **Fell** (witnessed fall), and the **location**.
 
-We focus on **1900 to present** to keep reporting more consistent and to
-avoid very old records with missing details.
+We focus on **1900 to present** to keep reporting more consistent and to avoid very old records with missing details.
 
 ### Cleaning
 
-We turn dates into plain years, change mass and coordinates to numbers,
-drop impossible or missing values, and keep observations from **1900**
-through the current year with valid coordinates. We also create
-**decade** bins so that long term changes are easier to see.
-
+We turn dates into plain years, change mass and coordinates to numbers, drop impossible or missing values, and keep observations from **1900** through the current year with valid coordinates. We also created **decade** bins so that long term changes are easier to see.
 ``` r
 # Read
 stopifnot(file.exists("meteorite-landings.csv"))
@@ -114,15 +93,7 @@ glimpse(mets)
 
 ### Why these cleaning choices
 
-We keep the time window from 1900 to today so that reporting practices
-are more comparable. Very old records often miss mass or coordinates and
-that makes maps and size comparisons hard to trust. We require a
-positive mass because zero or negative values are clear entry mistakes.
-We also keep only rows with a latitude and longitude so that location
-summaries match the plots. Finally, we use the year from a timestamp if
-it exists, fall back to a date, and then to a plain number. This order
-avoids losing valid years that are stored in different ways across
-files.
+We keep the time window from 1900 to today so that reporting practices are more comparable. Very old records often miss mass or coordinates and that makes maps and size comparisons hard to trust. We require a positive mass because zero or negative values are clearly entry mistakes because mass cannot be negative. We also filterred out the meteorites with no coordinates out so we can have a clear understanding of where the meteorites are more prone to fall in the world and why. Finally, we use the year from a timestamp if it exists, fall back to a date, and then to a plain number. This order avoids losing valid years that are stored in different ways across files.
 
 ### Key variables after cleaning
 
@@ -191,33 +162,29 @@ knitr::kable(summary_tbl, caption = "Summary of the dataset after cleaning")
 |---:|---:|:---|:---|---:|---:|---:|---:|---:|---:|
 | 37389 | 404 | 2% | 59% | 0.01 | 6.5 | 27.7 | 7218.089 | 167 | 6e+07 |
 
-Summary of the dataset after cleaning
+**How to read this table.** There are **`r format(summary_tbl$records, big.mark=",")`** records in the cleaned data spread across **`r summary_tbl$classes`** distinct classes. Only **`r summary_tbl$share_witnessed`** are witnessed falls, so most entries are finds that were collected later. About **`r summary_tbl$share_antarctica`** come from Antarctic latitudes, which shows how important that region is for recovery.
 
-**How to read this table.** There are **37,389** records in the cleaned
-data spread across **404** distinct classes. Only **2%** are witnessed
-falls, so most entries are finds that were collected later. About
-**59%** come from Antarctic latitudes, which shows how important that
-region is for recovery.
+For mass, the smallest recorded piece is **`r format(round(summary_tbl$mass_min_g,1), big.mark=",")` g**. A quarter of all pieces are below **`r format(round(summary_tbl$mass_q1_g,1), big.mark=",")` g**. The median is **`r format(round(summary_tbl$mass_median_g,1), big.mark=",")` g**, which means half the records are lighter than that and half are heavier. The mean is **`r format(round(summary_tbl$mass_mean_g,1), big.mark=",")` g**, which is usually higher than the median because a few very heavy meteorites pull the average up. Three quarters of the pieces are below **`r format(round(summary_tbl$mass_q3_g,1), big.mark=",")` g**. The largest piece reaches **`r format(round(summary_tbl$mass_max_g,1), big.mark=",")` g**. The big gap between the upper quartile and the maximum and the difference between mean and median tell us the mass distribution is skewed to the right(has a long right tail). That is a helpful warning when we look at size trends later.
 
-For mass, the smallest recorded piece is **0 g**. A quarter of all
-pieces are below **6.5 g**. The median is **27.7 g**, which means half
-the records are lighter than that and half are heavier. The mean is
-**7,218.1 g**, which is usually higher than the median because a few
-very heavy meteorites pull the average up. Three quarters of the pieces
-are below **167 g**. The largest piece reaches **6e+07 g**. The big gap
-between the upper quartile and the maximum and the difference between
-mean and median tell us the mass distribution has a long right tail.
-That is a helpful warning when we look at size trends later.
+## Variables
 
+- **name**: The name assigned to the meteorite.
+- **id**: A unique identifier for each meteorite in the dataset.
+- **nametype**: Indicates whether the name is “Valid” or “Relict.”
+- **recclass**: The classification of the meteorite (e.g., L6, H5), based on composition and structure.
+- **mass**: The mass of the meteorite in grams.
+- **fall**: Whether the meteorite was “Found” or “Fell” (witnessed at the time of landing).
+- **year**: The year in which the meteorite landed or was found (parsed from various formats).
+- **reclat**: Latitude coordinate where the meteorite was recovered.
+- **reclong**: Longitude coordinate where the meteorite was recovered.
+- **GeoLocation**: A string version of the latitude and longitude combined, typically in `(lat, long)` format.
+
+---
 ## Results
 
-The next sections focus on four ideas that match our questions: yearly
-counts, typical size by decade, class composition, and where the
-heaviest one percent were recovered. Each section uses the same cleaned
-data and gives a short explanation of what the figure means in plain
-language.
+We tried to find answers to our questions in this section. Our main focus was to find any noticeable patterns with the locations and the types of the findings. If the patterns or the size have changed over the years. If the size has a role to play in where they might fall/found.
 
-### Are we recording more meteorites over time?
+### When are meteorites most likely to be recorded? Are there long-term trends over the years?
 
 ``` r
 yr_counts <- mets %>% count(year, name = "n")
@@ -231,17 +198,12 @@ ggplot(yr_counts, aes(year, n)) +
 
 ![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
-**Explanation.** The line starts low in the early 1900s and climbs after
-the 1960s. It reaches a high point in **1979** with **3044** records.
-The main idea here is simple. When people look more, they find more.
-Field searches, museum uploads, and better reporting all push the line
-up. If the sky itself were sending more rocks, we would also see a clear
-rise in witnessed falls. We do not see that. So this picture is mostly
-about effort and record keeping. Small bumps from year to year are
-normal and usually tied to funding, weather, or trips that did or did
-not happen.
+The line starts low in the early 1900s and climbs after the 1960s. It reaches a high point in **`r peak$year`** with **`r peak$n`** records. The main idea here is simple. When people look more, they find more. Field searches, museum uploads, and better reporting all push the line up. If the sky itself were sending more rocks, we would also see a clear rise in witnessed falls but we do not see that. This could mean that the increase comes from effort and record keeping not a sudden surge in meteorites landings.
 
-#### Sensitivity: remove Antarctica
+Overall, this pattern reflects human effort more than cosmic change. It's important to recognize that catalog completeness, institutional priorities, and funding cycles all shape what gets recorded.So, some spikes or dips may reflect recording artifacts more than physical reality.
+
+
+#### Sensitivity: Antarctica
 
 ``` r
 mets_no_ant <- mets %>% filter(lat > -60)
@@ -258,11 +220,7 @@ ggplot(yr_comp, aes(year, n, linetype = set)) +
 
 ![](README_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
-**Explanation.** Antarctica is famous for meteorite hunting because dark
-rocks are easy to spot on ice and they last longer there. When we remove
-Antarctica the totals drop in late decades, but the overall climb stays.
-That tells us two things. Good hunting grounds make a difference, and
-the world as a whole has put more time into searching and logging finds.
+Antarctica is famous for meteorite hunting because dark rocks are easy to spot on ice and they're preseved well in the cold and dry conditions. When we remove Antarctica the total counts drop significantly but the overall trend still is up. That tells us two things. First, Good hunting grounds make a difference, and the world as a whole has put more time into searching and logging finds.This graph is a reminder that all the findings that we have in record are not the only findings.
 
 #### Witnessed falls only
 
@@ -276,11 +234,7 @@ ggplot(fell_only, aes(year, n)) +
 
 ![](README_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
-**Explanation.** This line is much lower and fairly flat. A witnessed
-fall needs a person who sees the fireball and reports it. Because this
-line does not shoot up, it supports the idea that the big rise in the
-first graph comes from stronger recovery and better catalogs, not from a
-sudden change in space rocks.
+This line is much lower than the total meteorite count because only a small fraction of entries are witnessed falls.Most records come from meteorites that were found later, not seen falling. While this line does vary over time, it lacks the dramatic increase seen in the full dataset. That contrast supports the idea that the surge in total counts is due to increased search and reporting efforts. Not more meteorites actually falling from space.
 
 ------------------------------------------------------------------------
 
@@ -301,14 +255,7 @@ ggplot(dec_med, aes(decade, median_mass)) +
 
 ![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
-**Explanation.** The typical size is larger in early decades and smaller
-in recent decades. For example, the early point is around 6,700 grams in
-1900, while the most recent point is around 100.7 grams in 2010. This
-fits a common sense story. As searches improved, people started finding
-lots of small pieces that used to be missed. We use the median on
-purpose. A few giant meteorites would pull the average up, but the
-median shows what a middle sized find looks like. The main takeaway is
-that the catalog has filled in the small end over time.
+The typical size is larger in early decades and smaller in recent decades. For example, the early point is around `r format(round(early$median_mass,1), big.mark=",")` grams in `r early$decade`, while the most recent point is around `r format(round(recent$median_mass,1), big.mark=",")` grams in `r recent$decade`. This fits a common sense story. As searches improved, people started finding lots of small pieces that used to be missed. We use the median on purpose. A few giant meteorites would pull the average up, but the median shows what a middle sized find looks like. The main takeaway is that the catalog has filled in the small end over time.
 
 #### Robustness: exclude irons
 
@@ -326,11 +273,7 @@ ggplot(dec_med_no_iron, aes(decade, median_mass)) +
 
 ![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
-**Explanation.** Iron meteorites are tough and easy to notice, so they
-could make earlier decades look heavier. When we remove irons, the
-downward trend still holds. That means the smaller typical size in later
-decades comes from finding more small stones, not only from a few famous
-heavy irons.
+Iron meteorites are tough and easy to notice, so they could make earlier decades look heavier. When we remove irons, the downward trend still holds. That means the smaller typical size in later decades comes from finding more small stones, not only from a few famous heavy irons.
 
 ------------------------------------------------------------------------
 
@@ -379,15 +322,39 @@ ggplot(class_by_decade, aes(decade, n, linetype = recclass)) +
 
 ![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
-**Explanation.** Ordinary chondrites, which include the L and H groups,
-are the most common across all decades. In our data they make up about
-**89.6 percent** overall. The totals go up as the catalog grows, but the
-mix stays steady. That tells us we are adding more of the same kinds,
-not switching to a totally different type of meteorite over time. Rarer
-classes are still here, just in smaller numbers, which is what most
-collections see.
+This plot shows how the 10 most common meteorite classes have changed over time. You can see that most of them really start climbing in the 1970s to 2000s, which lines up with the overall increase in meteorite finds. Classes like L6, H5, and H6 show up the most and stay that way across the decades.
+
+Chondrites (the L and H types) are super common and easier to spot and identify. Using color helps us quickly compare their trends. For example, L6 peaks pretty sharply around the 1980s. Rarer ones like CM2 are still there, just in much smaller amounts. So the main idea here is that we’re mostly adding more of the same kinds of meteorites to the catalog, not finding totally new ones.
 
 ------------------------------------------------------------------------
+
+### Meteorite finds by hemisphere
+```{r}
+mets %>%
+  filter(!is.na(lat)) %>%
+  mutate(hemisphere = ifelse(lat >= 0, "Northern", "Southern")) %>%
+  count(hemisphere) %>%
+  ggplot(aes(x = hemisphere, y = n, fill = hemisphere)) +
+  geom_col(show.legend = FALSE) +
+  labs(title = "Meteorite Finds by Hemisphere",
+       x = "Hemisphere", y = "Number of Finds")
+
+```
+This bar plot compares the number of meteorite findings in the Northern vs. Southern Hemisphere. The Southern Hemisphere has more recorded finds. That’s largely because of Antarctica, and USA and Africa contribute for the north hemisphere. This graph highlights how environmental conditions and search efforts influence the data we have.
+
+------------------------------------------------------------------------
+### Distribution of meteorite masses(Log Scale)
+```{r}
+mets %>%
+  filter(!is.na(mass), mass > 0) %>%
+  ggplot(aes(x = mass)) +
+  geom_histogram(bins = 70, fill = "grey", alpha = 10) +
+  scale_x_log10(labels = scales::comma) +
+  labs(title = "Distribution of Meteorite Masses (Log Scale)",
+       x = "Mass (g, log scale)", y = "Count")
+
+```
+This histogram shows how meteorite masses are distributed, using a logarithmic scale on the x-axis. Most meteorites are pretty small and really big ones are rare. The log scale helps show this skewed distribution, where a handful of heavy meteorites make up a huge portion of the total mass. This is why we often focus on the median mass instead of the mean. The mean would be pulled way up by a few huge outliers.
 
 ### Where are the heaviest pieces recorded?
 
@@ -418,48 +385,34 @@ if (has_maps) {
 
 ![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
-**Explanation.** The heaviest pieces tend to show up in open and dry
-places such as deserts and ice fields. These landscapes make dark rocks
-easier to see and they protect them from weather. In the list of the
-very largest fifteen, **13** are irons. That matches what people find in
-the field because iron holds together well and stands out. The map is a
-picture of where finds were made, not a count of where most rocks fell.
-In short, location and environment matter a lot for what ends up in the
-catalog.
+The heaviest pieces tend to show up in open and dry places such as deserts and ice fields. These landscapes make dark rocks easier to see and they protect them from weather. In the list of the very largest fifteen, **`r top15_iron`** are irons. That matches what people find in the field because iron holds together well and stands out. The map is a picture of where finds were made, not a count of where most rocks fell. In short, location and environment matter a lot for what ends up in the catalog.
 
+------------------------------------------------------------------------
+
+### All of the findings over the world
+```{r}
+# Filter out rows with missing coordinates
+mets_with_coords <- mets %>% filter(!is.na(lat), !is.na(long))
+
+# Base map data
+world <- map_data("world")
+
+# Plot with better visibility and clarity
+ggplot() +
+  geom_polygon(data = world, aes(x = long, y = lat, group = group),
+               fill = "gray95", color = "white", linewidth = 0.2) +
+  geom_point(data = mets_with_coords,
+             aes(x = long, y = lat),
+             color = "black", size = 1.2, alpha = 0.5) +
+  coord_fixed(1.3) +
+  labs(
+    title = "All Meteorite Finds: Global Distribution",
+    x = "Longitude",
+    y = "Latitude"
+  ) +
+  theme_minimal()
+```
+This map shows where all recorded meteorite finds have been made around the world. We can clearly see dense clusters in North Africa, the United States, and especially Antarctica. That’s not because more meteorites fall in those spots. Instead, it reflects where people are able to find them. Antarctica stands out because dark rocks are super easy to spot against the ice, and the cold preserves them really well. Deserts help too, like in the Sahara and parts of Australia. On the other hand, we see fewer finds in jungles, cities, and oceans where meteorites can get buried, lost, or just ignored.
+------------------------------------------------------------------------
 ## Conclusion
-
-We return to the four questions from the introduction and answer them
-directly.
-
-1.  **When are meteorites most likely to be recorded, and are there long
-    term trends?** Yes, counts go up sharply after the 1960s and peak in
-    **1979**. This is mainly about search effort and better record
-    keeping, not a new burst of meteorites. The witnessed fall line
-    stays fairly flat, which supports this idea.
-
-2.  **How has the typical size changed across decades?** The median mass
-    is larger in early decades and smaller in recent decades. Modern
-    searches added many small fragments that were missed before, so the
-    center of the size range moved down. This result still holds when
-    irons are removed.
-
-3.  **What types are most common over time, and does the mix change?**
-    Ordinary chondrites remain on top across all decades, and they make
-    up about **89.6 percent** of the records overall. The mix stays
-    stable as the catalog grows, which suggests we are seeing more of
-    the same kinds rather than a major shift in composition.
-
-4.  **Where are the heaviest pieces recorded, and do location and
-    environment matter?** The heaviest finds cluster in places that help
-    people see and recover them, such as deserts and Antarctica. Many of
-    the largest are irons. This is about visibility and survival on the
-    ground, not necessarily about where the sky drops the most material.
-
-Overall, the visuals tell a consistent story. The number of records
-follows the effort we put into searching and cataloging. The typical
-size has moved down because we now collect small pieces too. The type
-mix stays steady with ordinary chondrites in the lead. Heavy finds show
-up where the land helps us notice them. These points make the graphs
-easier to talk about in plain language and set honest expectations for
-what this dataset can and cannot tell us.
+Our extensive research on global meteorite findings found trends that challenged some of our assumptions and provided fresh insights into how these space pebbles are discovered and recorded. We in the beginning assumed that meteorite data would reflect where and when they fell. Instead, we found that technology, and environment shape the records significantly more than we thought. Meteorites are discovered not only where they land, but also where people look for them and, more importantly, where they are easiest to notice and survive. This is why deserts and Antarctica appear so clearly on our maps. The increase of reported meteorites over the last few decades, particularly since the 1960s, is due to improved field trips, digital record keeping, and cataloging rather than more meteorites falling. We also discovered that the median mass of meteorites has continuously decreased over decades. This isn't because meteorites are getting smaller.We just got better at finding the smaller ones which would go unnoticed before. Many of the largest are made of iron, which is visually striking and weather resistant.
