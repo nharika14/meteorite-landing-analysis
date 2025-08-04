@@ -340,6 +340,8 @@ mets %>%
        x = "Hemisphere", y = "Number of Finds")
 
 ```
+![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+
 This bar plot compares the number of meteorite findings in the Northern vs. Southern Hemisphere. The Southern Hemisphere has more recorded finds. That’s largely because of Antarctica, and USA and Africa contribute for the north hemisphere. This graph highlights how environmental conditions and search efforts influence the data we have.
 
 ------------------------------------------------------------------------
@@ -354,6 +356,8 @@ mets %>%
        x = "Mass (g, log scale)", y = "Count")
 
 ```
+![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+
 This histogram shows how meteorite masses are distributed, using a logarithmic scale on the x-axis. Most meteorites are pretty small and really big ones are rare. The log scale helps show this skewed distribution, where a handful of heavy meteorites make up a huge portion of the total mass. This is why we often focus on the median mass instead of the mean. The mean would be pulled way up by a few huge outliers.
 
 ### Where are the heaviest pieces recorded?
@@ -383,7 +387,7 @@ if (has_maps) {
 }
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+![](README_files/figure-gfm/map-heaviest-1.png)<!-- -->
 
 The heaviest pieces tend to show up in open and dry places such as deserts and ice fields. These landscapes make dark rocks easier to see and they protect them from weather. In the list of the very largest fifteen, **`r top15_iron`** are irons. That matches what people find in the field because iron holds together well and stands out. The map is a picture of where finds were made, not a count of where most rocks fell. In short, location and environment matter a lot for what ends up in the catalog.
 
@@ -413,6 +417,8 @@ ggplot() +
   ) +
   theme_minimal()
 ```
+![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+
 This map shows where all recorded meteorite finds have been made around the world. We can clearly see dense clusters in North Africa, the United States, and especially Antarctica. That’s not because more meteorites fall in those spots. Instead, it reflects where people are able to find them. Antarctica stands out because dark rocks are super easy to spot against the ice, and the cold preserves them really well. Deserts help too, like in the Sahara and parts of Australia. On the other hand, we see fewer finds in jungles, cities, and oceans where meteorites can get buried, lost, or just ignored.
 
 ------------------------------------------------------------------------
