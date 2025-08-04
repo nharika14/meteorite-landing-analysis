@@ -390,6 +390,7 @@ The heaviest pieces tend to show up in open and dry places such as deserts and i
 ------------------------------------------------------------------------
 
 ### All of the findings over the world
+
 ```{r}
 # Filter out rows with missing coordinates
 mets_with_coords <- mets %>% filter(!is.na(lat), !is.na(long))
@@ -413,6 +414,7 @@ ggplot() +
   theme_minimal()
 ```
 This map shows where all recorded meteorite finds have been made around the world. We can clearly see dense clusters in North Africa, the United States, and especially Antarctica. That’s not because more meteorites fall in those spots. Instead, it reflects where people are able to find them. Antarctica stands out because dark rocks are super easy to spot against the ice, and the cold preserves them really well. Deserts help too, like in the Sahara and parts of Australia. On the other hand, we see fewer finds in jungles, cities, and oceans where meteorites can get buried, lost, or just ignored.
+
 ------------------------------------------------------------------------
 ## Conclusion
 Our extensive research on global meteorite findings found trends that challenged some of our assumptions and provided fresh insights into how these space pebbles are discovered and recorded. We in the beginning assumed that meteorite data would reflect where and when they fell. Instead, we found that technology, and environment shape the records significantly more than we thought. Meteorites are discovered not only where they land, but also where people look for them and, more importantly, where they are easiest to notice and survive. This is why deserts and Antarctica appear so clearly on our maps. The increase of reported meteorites over the last few decades, particularly since the 1960s, is due to improved field trips, digital record keeping, and cataloging rather than more meteorites falling. We also discovered that the median mass of meteorites has continuously decreased over decades. This isn't because meteorites are getting smaller.We just got better at finding the smaller ones which would go unnoticed before. Many of the largest are made of iron, which is visually striking and weather resistant.
