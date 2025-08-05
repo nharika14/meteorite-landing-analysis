@@ -167,7 +167,7 @@ For mass, the smallest recorded piece is **`r format(round(summary_tbl$mass_min_
 - **reclong**: Longitude coordinate where the meteorite was recovered.
 - **GeoLocation**: A string version of the latitude and longitude combined, typically in `(lat, long)` format.
 
-
+---
 ## Results
 
 We tried to find answers to our questions in this section. Our main focus was to find any noticeable patterns with the locations and the types of the findings. If the patterns or the size have changed over the years. If the size has a role to play in where they might fall/found.
